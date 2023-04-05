@@ -1,0 +1,42 @@
+FROM mcr.microsoft.com/windows/servercore:ltsc2019
+SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue';"]
+WORKDIR C:/ProgramData
+RUN Invoke-WebRequest 'https://download.oracle.com/java/18/latest/jdk-18_windows-x64_bin.exe' -OutFile 'java.exe'
+RUN Invoke-WebRequest 'https://archive.apache.org/dist/tomcat/tomcat-9/v9.0.65/bin/apache-tomcat-9.0.65-windows-x64.zip' -OutFile 'tomcat.zip'
+RUN Invoke-WebRequest 'https://archive.apache.org/dist/maven/maven-3/3.8.6/binaries/apache-maven-3.8.6-bin.zip' -OutFile 'maven.zip'
+RUN Invoke-WebRequest 'https://github.com/git-for-windows/git/releases/download/v2.37.0.windows.1/Git-2.37.0-64-bit.exe' -OutFile 'git.exe'
+RUN Start-Process -filepath git.exe -passthru -wait -argumentlist "/VERYSILENT","/NORESTART","/NOCANCEL","/CLOSEAPPLICATIONS","/RESTARTAPPLICATIONS","/LOG=git.log"
+RUN Expand-Archive tomcat.zip -DestinationPath C:/ProgramData
+RUN Expand-Archive maven.zip -DestinationPath C:/ProgramData
+RUN Remove-Item tomcat.zip
+RUN Remove-Item git.exe
+RUN Remove-Item maven.zip
+RUN Rename-Item apache-maven-3.8.6 maven
+RUN Start-Process -filepath java.exe -passthru -wait -argumentlist "/s,INSTALLDIR=c:\Java\jre1.8.0_91,/L,install64.log"
+RUN Remove-Item java.exe
+RUN Rename-Item apache-tomcat-9.0.65 Tomcat9
+RUN Remove-Item 'C:/ProgramData/Tomcat9/webapps' -Recurse
+RUN New-Item 'C:/ProgramData/Tomcat9/webapps' -itemType Directory
+ENV DCOMCertificatePath C:/ProgramData/Tomcat9/RuleEngine.pem
+ENV DCOMCertificatePassword a5b50932
+ADD RuleEngine.pem C:/ProgramData/Tomcat9/RuleEngine.pem
+ENV DCOM_SERVICE_DATA_PATH C:/ProgramData/ruleeginedata/
+RUN New-Item 'C:/ProgramData/ruleeginedata' -itemType Directory
+ENV JAVA_HOME C:/Java/jre1.8.0_91
+ENV MAVEN_HOME C:/ProgramData/maven
+COPY scripts/kmodule.xml ./kmodule.xml
+COPY scripts/pom.xml ./pom.xml
+COPY dictionary.json ./dictionary.json
+ENV DCOMDictionaryPath C:/ProgramData/dictionary.json
+RUN setx /M PATH $($Env:PATH + ';C:\ProgramData\maven\bin') 
+RUN mvn org.apache.maven.plugins:maven-dependency-plugin:3.3.0:get  `-Dartifact=org.drools:drools-model-compiler:7.68.0.Final
+RUN mvn org.apache.maven.plugins:maven-dependency-plugin:3.3.0:get  `-Dartifact=org.kie:kie-maven-plugin:7.68.0.Final
+ADD rasecompiler/target/RaseCompiler.jar C:/ProgramData/
+RUN mvn install:install-file -Dfile=C:/ProgramData/RaseCompiler.jar `-DgroupId=org.dcom `-DartifactId=RuleEngineCore `-Dversion=1.0 `-Dpackaging=jar
+RUN mvn install:install-file -Dfile=C:/ProgramData/RaseCompiler.jar `-DgroupId=org.dcom `-DartifactId=DCOMCore `-Dversion=1.0 `-Dpackaging=jar
+COPY scripts/startup_windows.sh ./startup.sh
+COPY scripts/startup.bat ./startup.bat
+ADD ruleengineservice/target/RuleEngine.war C:/ProgramData/Tomcat9/webapps/ROOT.war
+
+EXPOSE 8080
+CMD ["startup.bat","run"]

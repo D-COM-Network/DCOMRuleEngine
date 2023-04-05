@@ -1,0 +1,21 @@
+#!/bin/bash
+UNAME=$(uname)
+if [[ "$UNAME" == "CYGWIN"* || "$UNAME" == "MINGW"* ]] ; then
+    alias docker='winpty docker'
+fi
+REGISTRY_PATH="registry.git.cf.ac.uk/dcom_cih"
+docker login $REGISTRY_PATH	
+mvn clean
+cd ruleenginecore
+mvn install
+cd ..
+mvn package
+if [[ $(uname -m) == 'arm64' ]]; then
+	docker buildx build --platform linux/amd64 --push -t $REGISTRY_PATH/ruleengine .
+elif [[ "$UNAME" == "CYGWIN"* || "$UNAME" == "MINGW"* ]] ; then
+  docker build -t $REGISTRY_PATH/ruleengine -f Dockerfile_Windows .
+  docker push $REGISTRY_PATH/ruleengine
+else
+  docker build -t $REGISTRY_PATH/ruleengine .
+  docker push $REGISTRY_PATH/ruleengine
+fi

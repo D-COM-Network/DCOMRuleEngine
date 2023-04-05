@@ -1,0 +1,72 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.dcom</groupId>
+    <artifactId>RuleEngineCore</artifactId>
+    <packaging>jar</packaging>
+    <version>1.0</version>
+    <name>RuleEngineCore</name>
+
+    <build>
+        <finalName>RuleEngine</finalName>
+        <plugins>
+                <plugin>
+                  <groupId>org.apache.maven.plugins</groupId>
+                  <artifactId>maven-compiler-plugin</artifactId>
+                  <version>3.8.0</version>
+                  <configuration>
+                      <release>11</release>
+                  </configuration>
+                </plugin>
+        </plugins>
+    </build>
+    <dependencies>
+      <dependency>
+          <groupId>org.dcom</groupId>
+          <artifactId>DCOMCore</artifactId>
+          <version>LATEST</version>
+      </dependency>
+      <dependency>
+          <groupId>org.drools</groupId>
+          <artifactId>drools-core</artifactId>
+          <version>7.68.0.Final</version>
+      </dependency>
+      <dependency>
+          <groupId>org.drools</groupId>
+          <artifactId>drools-compiler</artifactId>
+          <version>7.68.0.Final</version>
+      </dependency>
+      <dependency>
+          <groupId>org.kie</groupId>
+          <artifactId>kie-ci</artifactId>
+          <version>7.68.0.Final</version>
+      </dependency>
+      <dependency>
+          <groupId>com.owlike</groupId>
+          <artifactId>genson-java-datetime</artifactId>
+          <version>1.6</version>
+      </dependency>
+    </dependencies>
+    <properties>
+      <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+      <maven.compiler.release>11</maven.compiler.release>
+    </properties>
+    <repositories>
+      <repository>
+        <id>gitlab-maven</id>
+        <url>https://git.cardiff.ac.uk/api/v4/groups/717/-/packages/maven</url>
+      </repository>
+    </repositories>
+    <distributionManagement>
+      <repository>
+        <id>gitlab-maven</id>
+        <url>https://git.cardiff.ac.uk/api/v4/projects/5412/packages/maven</url>
+      </repository>
+      <snapshotRepository>
+        <id>gitlab-maven</id>
+        <url>https://git.cardiff.ac.uk/api/v4/projects/5412/packages/maven</url>
+      </snapshotRepository>
+    </distributionManagement>
+</project>
