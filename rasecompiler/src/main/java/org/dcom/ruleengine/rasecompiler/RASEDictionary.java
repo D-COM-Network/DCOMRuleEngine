@@ -23,6 +23,7 @@ import org.dcom.core.compliancedocument.Row;
 import org.dcom.core.compliancedocument.Cell;
 import org.dcom.core.compliancedocument.TitleCell;
 import org.dcom.core.compliancedocument.DataCell;
+import org.dcom.core.compliancedocument.inline.*;
 import javax.swing.JOptionPane;
 import java.awt.FileDialog;
 import java.awt.Frame;
@@ -83,7 +84,7 @@ public class RASEDictionary {
 				System.exit(1);
 			}
 		
-			List<RASEItem> structure = RASEExtractor.extractStructure(document);
+			List<InlineItem> structure = RASEExtractor.extractStructure(document);
 			System.out.println("Checking...:"+documentFile.getName());
 			RASEBox box = new RASEBox("RequirementSection","ROOT");
 			box.addAllSubItems(structure);
@@ -101,8 +102,8 @@ public class RASEDictionary {
 	}	
 	
 	public static String parseRase(RASEBox box,String parent, int indent) {
-		boolean boxExists = box.getAllSubItems().stream().anyMatch(t -> t.isBox());
-		boolean tagExists = box.getAllSubItems().stream().anyMatch(t -> t.isTag());
+		boolean boxExists = box.getAllSubItems().stream().anyMatch(t -> t instanceof RASEBox);
+		boolean tagExists = box.getAllSubItems().stream().anyMatch(t -> t instanceof RASETag);
 		if (boxExists && tagExists) box = RASEValidator.refactorBox(box);
 		System.out.println(indent(indent)+box.toStringShort());
 		String newParent=parent;

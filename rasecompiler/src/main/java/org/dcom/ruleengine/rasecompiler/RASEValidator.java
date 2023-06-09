@@ -19,6 +19,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package org.dcom.ruleengine.rasecompiler;
 import org.dcom.core.compliancedocument.ComplianceDocument;
 import org.dcom.core.compliancedocument.ComplianceItem;
+import org.dcom.core.compliancedocument.inline.RASEBox;
+import org.dcom.core.compliancedocument.inline.RASETag;
+import org.dcom.core.compliancedocument.inline.InlineItem;
 import java.util.List;
 
 /**
@@ -31,14 +34,14 @@ public class RASEValidator {
 	
 	public static RASEBox refactorBox(RASEBox box) {
 		//refactor to solve issue convert single tag into a box - change tag type etc..
-		long noTags = box.getAllSubItems().stream().filter(t -> t.isTag()).count();
+		long noTags = box.getAllSubItems().stream().filter(t -> t instanceof RASETag).count();
 		if (noTags > 1) {
 			System.err.println("Invalid Tags!"+box.getId());
 			System.err.println(noTags);
 			System.exit(0);
 		}
 		String newType="";
-		RASETag tag = (RASETag) box.getAllSubItems().stream().filter(t -> t.isTag()).findFirst().orElse(null);
+		RASETag tag = (RASETag) box.getAllSubItems().stream().filter(t -> t instanceof RASETag).findFirst().orElse(null);
 		if (tag.getType()==RASETag.REQUIREMENT) newType="RequirementSection" ;
 		else if (tag.getType()==RASETag.SELECTION) newType="SelectionSection";
 		else if (tag.getType()==RASETag.EXCEPTION) newType="ExceptionSection";
@@ -48,7 +51,7 @@ public class RASEValidator {
 		newBox.setDocumentReference(tag.getDocumentReference());
 		String tagType="Requirement";
 		if (tag.getType()==RASETag.APPLICATION) tagType="Application";
-		RASETag newTag = new RASETag(tagType,tag.getProperty(),tag.getComparator(),tag.getValue(),tag.getUnit(),tag.getId()+"a");
+		RASETag newTag = new RASETag(tagType,tag.getProperty(),tag.getComparator(),tag.getValue(),tag.getUnit(),tag.getId()+"a","");
 		newTag.setDocumentReference(tag.getDocumentReference());
 		newBox.addSubItem(newTag);
 		box.addSubItem(newBox);
@@ -60,28 +63,28 @@ public class RASEValidator {
 
 	public static String validateDocument(ComplianceDocument document) {
 		try {
-			List<RASEItem> raseItems =  RASEExtractor.extractStructure(document);
-			processStructure("ROOT",raseItems);
+			List<InlineItem> InlineItems =  RASEExtractor.extractStructure(document);
+			processStructure("ROOT",InlineItems);
 		} catch (Exception e) {
 			return e.getMessage();
 		}
 		return null;
 	}
 	
-	private static void processStructure(String id,List<RASEItem> items) throws Exception{
+	private static void processStructure(String id,List<InlineItem> items) throws Exception{
 		
 		//we can deal with a single mixed tag - but not multiple
 		boolean hasBox = false;
 		int noTags = 0;
 		
-		for (RASEItem raseItem: items) {
-				if (raseItem.isBox()) hasBox=true;
-				if (raseItem.isTag()) noTags++;
+		for (InlineItem item: items) {
+				if (item instanceof RASEBox) hasBox=true;
+				if (item instanceof RASETag) noTags++;
 		}
 		if (noTags > 1 && hasBox ) {
 			throw new Exception(id);
 		}
-		for (RASEItem raseItem: items)  if (raseItem.isBox()) processStructure(raseItem.getId(), ((RASEBox)raseItem).getAllSubItems());
+		for (InlineItem item: items)  if (item instanceof RASEBox) processStructure(item.getId(), ((RASEBox)item).getAllSubItems());
 		
 	}
 

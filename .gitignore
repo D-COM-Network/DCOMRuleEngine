@@ -1,0 +1,5 @@
+
+*.pem
+.DS_Store
+dictionary.json
+**/target/**

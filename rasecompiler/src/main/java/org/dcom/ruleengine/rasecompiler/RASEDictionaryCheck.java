@@ -28,6 +28,7 @@ import java.nio.file.Files;
 import org.dcom.core.compliancedocument.ComplianceItem;
 import org.dcom.core.compliancedocument.Table;
 import org.dcom.core.compliancedocument.Figure;
+import org.dcom.core.compliancedocument.inline.*;
 import java.nio.charset.StandardCharsets;
 import org.dcom.core.services.FileDictionaryService;
 import org.dcom.core.services.DictionaryItem;
@@ -155,9 +156,9 @@ public class RASEDictionaryCheck {
 			for (File documentFile : fc.getFiles()) {
 				String cDocumentString = Files.readString(documentFile.toPath(), StandardCharsets.US_ASCII);
 				ComplianceDocument document = XMLComplianceDocumentDeserialiser.parseComplianceDocument(cDocumentString);
-				List<RASEItem> structure = RASEExtractor.extractStructure(document);
+				List<InlineItem> structure = RASEExtractor.extractStructure(document);
 				System.out.println("Checking...:"+documentFile.getName());
-				for (RASEItem i: structure) parseRase(i,dictionary,null);
+				for (InlineItem i: structure) parseRase(i,dictionary,null);
 	
 			}
 			
@@ -186,13 +187,13 @@ public class RASEDictionaryCheck {
 			
 	}	
 	
-	public static String parseRase(RASEItem item,FileDictionaryService dictionary,String parentObject) {
+	public static String parseRase(InlineItem item,FileDictionaryService dictionary,String parentObject) {
 		String object = parentObject;
 		if (item instanceof RASEBox) {
 			RASEBox box = (RASEBox) item;
-			List<RASEItem> items = box.getAllSubItems();
+			List<InlineItem> items = box.getAllSubItems();
 			//first cycle to identify applicabilities
-			for (RASEItem i: items) {
+			for (InlineItem i: items) {
 				if (i instanceof RASEBox) {
 					if (((RASEBox)i).getType() == RASEBox.APPLICATION_SECTION )object = parseRase(i,dictionary,object);
 				} else {
@@ -206,7 +207,7 @@ public class RASEDictionaryCheck {
 				}
 			}
 			//second cycle to process
-			for (RASEItem i: items) {
+			for (InlineItem i: items) {
 				if (i instanceof RASEBox) parseRase(i,dictionary,object);
 			}
 		}

@@ -23,6 +23,7 @@ import org.dcom.core.compliancedocument.Row;
 import org.dcom.core.compliancedocument.TitleCell;
 import org.dcom.core.compliancedocument.DataCell;
 import org.dcom.core.compliancedocument.Figure;
+import org.dcom.core.compliancedocument.inline.*;
 import java.util.List;
 import java.util.ArrayList;
 import org.w3c.dom.Document;
@@ -124,8 +125,8 @@ public class RASEExtractor {
 			return items;
 		}
 		
-		public static List<RASEItem> extractStructure(ComplianceItem item) {
-			List<RASEItem> items = new ArrayList<RASEItem>();
+		public static List<InlineItem> extractStructure(ComplianceItem item) {
+			List<InlineItem> items = new ArrayList<InlineItem>();
 			if (item instanceof Table || item instanceof Figure) return items;
 			RASEBox rootItem = null;
 			if (item.hasMetaData("raseType")) {
@@ -140,12 +141,12 @@ public class RASEExtractor {
 			}
 			
 			for (int i=0; i < item.getNoSubItems();i++) {
-				List<RASEItem> thisItems = extractStructure(item.getSubItem(i));
+				List<InlineItem> thisItems = extractStructure(item.getSubItem(i));
 				if (rootItem!=null) rootItem.addAllSubItems(thisItems);
 				else items.addAll(thisItems);
 			}
 			if (item.hasMetaData("body")) {
-					List<RASEItem> thisItems = extractStructure(item.getMetaDataString("body"),item.getMetaDataString("ckterms:accessLocation"));
+					List<InlineItem> thisItems = extractStructure(item.getMetaDataString("body"),item.getMetaDataString("ckterms:accessLocation"));
 					if (rootItem!=null) rootItem.addAllSubItems(thisItems);
 					else items.addAll(thisItems);
 			}
@@ -157,7 +158,7 @@ public class RASEExtractor {
 			//check there are no sub elements here
 			NodeList children = element.getChildNodes();
 			for (int i=0; i < children.getLength();i++) {
-				List<RASEItem> items = crawlStructure(children.item(i),ref);
+				List<InlineItem> items = crawlStructure(children.item(i),ref);
 				if (items.size()>0) {
 					 System.err.println("Error found RASE in a tag!["+items.get(0).getDocumentReference()+"/"+items.get(0).getId()+"]");
 					 System.exit(0);
@@ -170,15 +171,15 @@ public class RASEExtractor {
 				return null;
 			}
 			if (type!=null && property!=null ) {
-				RASETag tag = new RASETag(type,property,element.getAttribute("data-raseComparator"),element.getAttribute("data-raseTarget"),element.getAttribute("data-raseUnit"),element.getAttribute("id"));
+				RASETag tag = new RASETag(type,property,element.getAttribute("data-raseComparator"),element.getAttribute("data-raseTarget"),element.getAttribute("data-raseUnit"),element.getAttribute("id"),"");
 				tag.setDocumentReference(ref);
 				return tag;
 			}
 			return null;
 		}
 		
-		private static List<RASEItem> crawlStructure(Node n, String ref) {
-			List<RASEItem> items = new ArrayList<RASEItem>();
+		private static List<InlineItem> crawlStructure(Node n, String ref) {
+			List<InlineItem> items = new ArrayList<InlineItem>();
 			if ( n.getNodeType() == Node.ELEMENT_NODE) {
 				Element element = (Element)n;
 				if ((element.getTagName().equalsIgnoreCase("span") || element.getTagName().equalsIgnoreCase("div")) && element.hasAttribute("data-raseType")) {
@@ -219,8 +220,8 @@ public class RASEExtractor {
 			return docRef;
 		}
 		
-		private static List<RASEItem> extractStructure(String body,String ref) {
-				List<RASEItem> items = new ArrayList<RASEItem>();
+		private static List<InlineItem> extractStructure(String body,String ref) {
+				List<InlineItem> items = new ArrayList<InlineItem>();
 				String bodyText = "<body>"+body+"</body>";
 				try {
 					DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();

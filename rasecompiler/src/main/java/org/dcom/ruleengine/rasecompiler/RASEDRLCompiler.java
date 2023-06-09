@@ -26,6 +26,7 @@ import org.dcom.core.compliancedocument.Row;
 import org.dcom.core.compliancedocument.Cell;
 import org.dcom.core.compliancedocument.TitleCell;
 import org.dcom.core.compliancedocument.DataCell;
+import org.dcom.core.compliancedocument.inline.*;
 import org.dcom.ruleengine.core.CompilerUtils;
 import org.dcom.ruleengine.core.DRLBuilder;
 import java.nio.charset.StandardCharsets;
@@ -70,8 +71,8 @@ public class RASEDRLCompiler {
 				System.err.println("Found mixed boxes with multiple tags"+validationResult);
 				System.exit(1);
 			}
-			List<RASEItem> structure = RASEExtractor.extractStructure(document);
-			for (RASEItem i: structure) {
+			List<InlineItem> structure = RASEExtractor.extractStructure(document);
+			for (InlineItem i: structure) {
 				if (i instanceof RASETag) {
 					System.err.println("Found root tag!"+i.getId());
 					System.exit(1);
@@ -86,7 +87,7 @@ public class RASEDRLCompiler {
 
 			ruleSet = new HashSet<DRLBuilder>();
 			List<RASEBox> allItems = new ArrayList<RASEBox>();
-			for (RASEItem i: structure) {
+			for (InlineItem i: structure) {
 				compileRASE((RASEBox)i,null,null,"");	
 				allItems.add((RASEBox)i);
 			}	
@@ -126,11 +127,11 @@ public class RASEDRLCompiler {
 			System.exit(0);	
 	}	
 	
-	private static String determineParent(List<RASEItem> tags,String setParent,String boxId,String upperParent) {
+	private static String determineParent(List<InlineItem> tags,String setParent,String boxId,String upperParent) {
 			Set<String> parent=new HashSet<String>();
 			Set<String> allFound = new HashSet<String>();
 			boolean foundObject= false;
-			for (RASEItem i: tags) {
+			for (InlineItem i: tags) {
 				RASETag tag =(RASETag)i;
 				if (dictionary.containsObject(tag.getProperty())) {
 					parent.add(tag.getProperty().toLowerCase());
@@ -181,15 +182,15 @@ public class RASEDRLCompiler {
 					System.err.println("DuplicateBox:"+box.getId());
 					return parent;
 			} else builtBoxes.add(box.getId());
-			boolean boxExists = box.getAllSubItems().stream().anyMatch(t -> t.isBox());
-			boolean tagExists = box.getAllSubItems().stream().anyMatch(t -> t.isTag());
+			boolean boxExists = box.getAllSubItems().stream().anyMatch(t -> t instanceof RASEBox);
+			boolean tagExists = box.getAllSubItems().stream().anyMatch(t -> t instanceof RASETag);
 			if (boxExists && tagExists) box = RASEValidator.refactorBox(box);
 			if (boxExists) {
 				String newParent=parent;
-				List<RASEItem> appliesBoxes = box.getAllSubItems().stream().filter(t -> t.getType() == RASEBox.APPLICATION_SECTION).collect(Collectors.toList());
+				List<InlineItem> appliesBoxes = box.getAllSubItems().stream().filter(t -> t instanceof RASEBox).filter(t -> ((RASEBox)t).getType() == RASEBox.APPLICATION_SECTION).collect(Collectors.toList());
 				HashMap<RASEBox,String> boxParents = new 	HashMap<RASEBox,String>();
-				RASEItem toRemove=null;
-				for (RASEItem i: appliesBoxes) {
+				InlineItem toRemove=null;
+				for (InlineItem i: appliesBoxes) {
 					newParent=compileRASE((RASEBox)i,newParent,box.getDocumentReference(),box.getId());
 					boxParents.put((RASEBox)i,newParent);
 					if (((RASEBox)i).getAllSubItems().size()==0) {
@@ -198,18 +199,18 @@ public class RASEDRLCompiler {
 					}
 				}
 				appliesBoxes.remove(toRemove);
-				List<RASEItem> selectBoxes = box.getAllSubItems().stream().filter(t -> t.getType() == RASEBox.SELECTION_SECTION).collect(Collectors.toList());
-				for (RASEItem i: selectBoxes) {
+				List<InlineItem> selectBoxes = box.getAllSubItems().stream().filter(t -> t instanceof RASEBox).filter(t -> ((RASEBox)t).getType() == RASEBox.SELECTION_SECTION).collect(Collectors.toList());
+				for (InlineItem i: selectBoxes) {
 					String p = compileRASE((RASEBox)i,newParent,box.getDocumentReference(),box.getId());
 					boxParents.put((RASEBox)i,p);
 				}
-				List<RASEItem> exceptionBoxes = box.getAllSubItems().stream().filter(t -> t.getType() == RASEBox.EXCEPTION_SECTION).collect(Collectors.toList());
-				for (RASEItem i: exceptionBoxes) {
+				List<InlineItem> exceptionBoxes = box.getAllSubItems().stream().filter(t -> t instanceof RASEBox).filter(t -> ((RASEBox)t).getType() == RASEBox.EXCEPTION_SECTION).collect(Collectors.toList());
+				for (InlineItem i: exceptionBoxes) {
 					String p = compileRASE((RASEBox)i,newParent,box.getDocumentReference(),box.getId());
 					boxParents.put((RASEBox)i,p);
 				}
-				List<RASEItem> requirementBoxes = box.getAllSubItems().stream().filter(t -> t.getType() == RASEBox.REQUIREMENT_SECTION).collect(Collectors.toList());
-				for (RASEItem i: requirementBoxes) {
+				List<InlineItem> requirementBoxes = box.getAllSubItems().stream().filter(t -> t instanceof RASEBox).filter(t -> ((RASEBox)t).getType() == RASEBox.REQUIREMENT_SECTION).collect(Collectors.toList());
+				for (InlineItem i: requirementBoxes) {
 					String p = compileRASE((RASEBox)i,newParent,box.getDocumentReference(),box.getId());
 					boxParents.put((RASEBox)i,p);
 				}
@@ -228,9 +229,9 @@ public class RASEDRLCompiler {
 			return null;
 	}
 	
-	private static void parentTransfer(List<RASEItem> boxes,String parent,HashMap<RASEBox,String> boxParents,String docRef,String boxId) {
+	private static void parentTransfer(List<InlineItem> boxes,String parent,HashMap<RASEBox,String> boxParents,String docRef,String boxId) {
 		if (parent==null) parent="Building";
-		for (RASEItem i: boxes) {
+		for (InlineItem i: boxes) {
 			if (i instanceof RASEBox) {
 				RASEBox b = (RASEBox)i;
 				if (boxParents.get(b)==null || !boxParents.get(b).equals(parent)){
@@ -265,7 +266,7 @@ public class RASEDRLCompiler {
 		}
 	}
 	
-	private static void mainRules(RASEBox box,String parent,String parentRef,List<RASEItem> applies,List<RASEItem> selected,List<RASEItem> excepted,List<RASEItem> requirements) {
+	private static void mainRules(RASEBox box,String parent,String parentRef,List<InlineItem> applies,List<InlineItem> selected,List<InlineItem> excepted,List<InlineItem> requirements) {
 		if (parent==null) parent="Building";
 
 		//na
@@ -278,7 +279,7 @@ public class RASEDRLCompiler {
 			if (selected.size()+applies.size()+excepted.size()>0) {
 				rule.and().oB();
 				boolean first=true;
-				for (RASEItem i: selected) {
+				for (InlineItem i: selected) {
 					if (first) {
 						first=false;
 						rule.oB();
@@ -294,7 +295,7 @@ public class RASEDRLCompiler {
 				}
 				if (!first) rule.cB();
 	
-				for (RASEItem i: applies) {
+				for (InlineItem i: applies) {
 					if (!first) rule.or();
 					else first=false;
 					if (i instanceof RASETag) {
@@ -306,7 +307,7 @@ public class RASEDRLCompiler {
 						rule.getFail(id);	
 					}
 				}
-				for (RASEItem i: excepted) {
+				for (InlineItem i: excepted) {
 					if (!first) rule.or(); 
 					else first=false;
 					if (i instanceof RASETag) {
@@ -330,7 +331,7 @@ public class RASEDRLCompiler {
 		if (!parentRef.startsWith("null") && box.getType()==RASEBox.REQUIREMENT_SECTION) rule.getApplicable(parentRef).and();
 		if (!parentRef.startsWith("null")) rule.notGetFail(parentRef).and().notGetPass(parentRef).and();
 		rule.notGetApplicable().and().notGetNotApplicable().and().checkType(parent);
-		for (RASEItem i: applies) {
+		for (InlineItem i: applies) {
 			rule.and();
 			if (i instanceof RASETag) {
 				RASETag t = (RASETag)i;
@@ -341,7 +342,7 @@ public class RASEDRLCompiler {
 				rule.getPass(id);	
 			}
 		}
-		for (RASEItem i: excepted) {
+		for (InlineItem i: excepted) {
 			rule.and();
 			if (i instanceof RASETag) {
 				RASETag t = (RASETag)i;
@@ -355,7 +356,7 @@ public class RASEDRLCompiler {
 		if (selected.size() > 0) {
 			rule.and().oB();
 			boolean first = true;
-			for (RASEItem i: selected) {
+			for (InlineItem i: selected) {
 				if (first) first = false; else rule.or();
 				if (i instanceof RASETag) {
 					RASETag t = (RASETag)i;
@@ -377,7 +378,7 @@ public class RASEDRLCompiler {
 		if (!parentRef.startsWith("null") && box.getType()==RASEBox.REQUIREMENT_SECTION) rule.getApplicable(parentRef).and();
 		if (!parentRef.startsWith("null")) rule.notGetFail(parentRef).and().notGetPass(parentRef).and();
 		rule.notGetFail().and().notGetPass().and().getApplicable();
-		for (RASEItem i: requirements) {
+		for (InlineItem i: requirements) {
 			rule.and();
 			if (i instanceof RASETag) {
 				RASETag t = (RASETag)i;
@@ -399,7 +400,7 @@ public class RASEDRLCompiler {
 			if (!parentRef.startsWith("null")) rule.notGetFail(parentRef).and().notGetPass(parentRef).and();
 			rule.notGetFail().and().notGetPass().and().getApplicable().and().oB();
 			boolean first = true;
-			for (RASEItem i: requirements) {
+			for (InlineItem i: requirements) {
 				if (first) first = false; else rule.or();
 				if (i instanceof RASETag) {
 					RASETag t = (RASETag)i;
@@ -421,12 +422,12 @@ public class RASEDRLCompiler {
 		if (box.getDocumentReference()==null) {
 			System.err.println("[Error] Found a box with no document reference:"+box.getId());
 		}
-		List<RASEItem> applies = box.getAllSubItems().stream().filter(t -> t.getType() == RASETag.APPLICATION).collect(Collectors.toList());
-		List<RASEItem> selected = box.getAllSubItems().stream().filter(t -> t.getType() == RASETag.SELECTION).collect(Collectors.toList());
-		List<RASEItem> excepted = box.getAllSubItems().stream().filter(t -> t.getType() == RASETag.EXCEPTION).collect(Collectors.toList());
-		List<RASEItem> requirements = box.getAllSubItems().stream().filter(t -> t.getType() == RASETag.REQUIREMENT).collect(Collectors.toList());
+		List<InlineItem> applies = box.getAllSubItems().stream().filter(t -> t instanceof RASETag).filter(t -> ((RASETag)t).getType() == RASETag.APPLICATION).collect(Collectors.toList());
+		List<InlineItem> selected = box.getAllSubItems().stream().filter(t -> t instanceof RASETag).filter(t -> ((RASETag)t).getType() == RASETag.SELECTION).collect(Collectors.toList());
+		List<InlineItem> excepted = box.getAllSubItems().stream().filter(t -> t instanceof RASETag).filter(t -> ((RASETag)t).getType() == RASETag.EXCEPTION).collect(Collectors.toList());
+		List<InlineItem> requirements = box.getAllSubItems().stream().filter(t -> t instanceof RASETag).filter(t -> ((RASETag)t).getType() == RASETag.REQUIREMENT).collect(Collectors.toList());
 		RASETag objectTag = null;
-		for (RASEItem i: applies) {
+		for (InlineItem i: applies) {
 			RASETag tag = (RASETag) i;
 			//detect a context change and change parent
 			if (dictionary.containsObject(tag.getProperty())) {
